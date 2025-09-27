@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Leaderboard</title>
+<title>Leaderboard Test</title>
 <style>
 body { font-family: sans-serif; padding: 20px; }
 #leaderboard { background: #f0f0f0; padding: 10px; border-radius: 8px; max-width: 300px; }
@@ -19,19 +19,18 @@ async function fetchLeaderboard() {
   try {
     const res = await fetch('/.netlify/functions/get-leaderboard');
     if (!res.ok) throw new Error('Function returned status ' + res.status);
-    const data = await res.json(); // parse JSON from DB
+    const data = await res.json();
     if (data.length > 0) {
       listDiv.innerHTML = data.map((r,i)=>`${i+1}. ${r.name}: ${r.score}`).join('<br>');
     } else {
       listDiv.innerHTML = 'No scores yet';
     }
-  } catch (err) {
+  } catch(err) {
     console.error(err);
     listDiv.innerHTML = 'Error loading leaderboard: ' + err.message;
   }
 }
 
-// Run on page load
 fetchLeaderboard();
 </script>
 
