@@ -2,149 +2,38 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dragonfly Game</title>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+<title>Leaderboard</title>
 <style>
-body { margin:0; overflow:hidden; font-family:sans-serif; }
-#leaderboard {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background: rgba(255,255,255,0.9);
-  padding: 10px;
-  border-radius: 8px;
-  max-width: 200px;
-  font-size: 14px;
-}
+body { font-family: sans-serif; padding: 20px; }
+#leaderboard { background: #f0f0f0; padding: 10px; border-radius: 8px; max-width: 300px; }
 </style>
 </head>
 <body>
 
-<div id="leaderboard">
-  <b>Leaderboard</b>
-  <div id="leaderboard-list">Loading...</div>
-</div>
+<h1>Leaderboard</h1>
+<div id="leaderboard">Loading...</div>
 
 <script>
-const config = {
-  type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
-  backgroundColor: '#c0f0ff',
-  scene: { preload, create, update },
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
-};
-
-const game = new Phaser.Game(config);
-
-let dragonflies = [];
-let score = 0;
-let gameTime = 10;
-let timerText, scoreText;
-
-// -----------------------
-// Phaser Scene Functions
-// -----------------------
-function preload() {}
-
-function create() {
-  score = 0;
-  dragonflies = [];
-
-  timerText = this.add.text(10, 10, 'Time: ' + gameTime, { fontSize: '20px', fill: '#000' });
-  scoreText = this.add.text(10, 35, 'Score: ' + score, { fontSize: '20px', fill: '#000' });
-
-  // Create dragonflies
-  for (let i = 0; i < 8; i++) {
-    const color = Math.random() < 0.5 ? 0xffff00 : 0x00ff00; // yellow = +1, green = -1
-    createDragonfly(this, color);
-  }
-
-  // Timer
-  this.time.addEvent({
-    delay: 1000,
-    repeat: gameTime - 1,
-    callback: () => {
-      gameTime--;
-      timerText.setText('Time: ' + gameTime);
-      if (gameTime <= 0) endGame(this);
-    }
-  });
-
-  // Load leaderboard from Netlify
-  fetchLeaderboard();
-}
-
-function createDragonfly(scene, color) {
-  const df = scene.add.circle(
-    Phaser.Math.Between(50, config.width - 50),
-    Phaser.Math.Between(100, config.height - 100),
-    15,
-    color
-  );
-  df.type = color === 0xffff00 ? 'yellow' : 'green';
-  df.speedX = Phaser.Math.Between(1, 3) * (Math.random() < 0.5 ? -1 : 1);
-  df.speedY = Phaser.Math.Between(1, 3) * (Math.random() < 0.5 ? -1 : 1);
-
-  df.setInteractive();
-  df.on('pointerdown', () => {
-    score += df.type === 'yellow' ? 1 : -1;
-    scoreText.setText('Score: ' + score);
-  });
-
-  dragonflies.push(df);
-}
-
-function update() {
-  dragonflies.forEach(df => {
-    df.x += df.speedX;
-    df.y += df.speedY;
-    if (df.x < 30 || df.x > config.width - 30) df.speedX *= -1;
-    if (df.y < 100 || df.y > config.height - 30) df.speedY *= -1;
-  });
-}
-
-function endGame(scene) {
-  const playerName = prompt('Game Over! Enter your name:', 'Player');
-  if (playerName) submitScore(playerName, score);
-  gameTime = 10;
-  scene.scene.restart();
-}
-
-// -----------------------
-// Netlify Leaderboard Functions
-// -----------------------
-async function submitScore(name, score) {
-  try {
-    const res = await fetch('/.netlify/functions/submit-score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, score })
-    });
-    if (!res.ok) throw new Error('Failed to submit score');
-    fetchLeaderboard();
-  } catch (err) {
-    console.error(err);
-    alert('Could not submit score. Check console.');
-  }
-}
-
 async function fetchLeaderboard() {
-  const listDiv = document.getElementById('leaderboard-list');
+  const listDiv = document.getElementById('leaderboard');
   try {
     const res = await fetch('/.netlify/functions/get-leaderboard');
-    if (!res.ok) throw new Error('Failed to fetch leaderboard');
-    const data = await res.json(); // safely parse JSON
+    if (!res.ok) throw new Error('Function returned status ' + res.status);
+    const data = await res.json(); // parse JSON from DB
     if (data.length > 0) {
-      listDiv.innerHTML = data.map((r, i) => `${i + 1}. ${r.name}: ${r.score}`).join('<br>');
+      listDiv.innerHTML = data.map((r,i)=>`${i+1}. ${r.name}: ${r.score}`).join('<br>');
     } else {
       listDiv.innerHTML = 'No scores yet';
     }
   } catch (err) {
     console.error(err);
-    listDiv.innerHTML = 'Error loading leaderboard';
+    listDiv.innerHTML = 'Error loading leaderboard: ' + err.message;
   }
 }
+
+// Run on page load
+fetchLeaderboard();
 </script>
+
 </body>
 </html>
